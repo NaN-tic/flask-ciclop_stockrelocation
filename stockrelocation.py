@@ -116,7 +116,8 @@ def save(lang):
                                 'A move was generated to new location.').format(
                             product=relocation.product.rec_name), 'success')
                     except Exception as e:
-                        flash(e[1][0], 'danger')
+                        message = '. '.join(filter(None, list(e[1])))
+                        flash(message, 'danger')
         elif qty == 0:
             flash(_('Qty is 0. Not created new relocation.'))
         else:
@@ -210,8 +211,9 @@ def confirm(lang):
                 flash(_('Confirmed to move {total} product/s to new locations.').format(
                     total=len(relocations)), 'info')
             except Exception as e:
+                message = '. '.join(filter(None, list(e[1])))
                 flash(_('Error when confirm relocations: {e}').format(
-                    e=e[1][0]), 'danger')
+                    e=message), 'danger')
 
     return redirect(url_for('.relocations', lang=g.language))
 
@@ -239,8 +241,9 @@ def delete(lang):
                 flash(_('Deleted {total} draft location/s.').format(
                     total=len(relocations)), 'info')
             except Exception as e:
+                message = '. '.join(filter(None, list(e[1])))
                 flash(_('Error when delete relocations: {e}').format(
-                    e=e[1][0]), 'danger')
+                    e=message), 'danger')
 
     return redirect(url_for('.relocations', lang=g.language))
 
