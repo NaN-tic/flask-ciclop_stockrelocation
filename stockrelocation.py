@@ -113,7 +113,7 @@ def save(lang):
                     try:
                         Relocation.confirm([relocation])
                         flash(_('Confirmed new relocation "{product}". '
-                                '"A move was generated to new location.').format(
+                                'A move was generated to new location.').format(
                             product=relocation.product.rec_name), 'success')
                     except Exception as e:
                         flash(e[1][0], 'danger')
