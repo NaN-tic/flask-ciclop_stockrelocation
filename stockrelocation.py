@@ -49,12 +49,12 @@ def product(lang):
 
     return jsonify(results=vals)
 
-@stockrelocation.route("/relocation/edit", methods=["GET", "POST"], endpoint="edit")
+@stockrelocation.route("/relocation/save", methods=["POST"], endpoint="save")
 @login_required
 @tryton.transaction()
 @csrf.exempt
-def edit(lang):
-    '''Edit'''
+def save(lang):
+    '''Save'''
 
     context = Transaction().context
 
@@ -101,20 +101,26 @@ def edit(lang):
                 relocation.warehouse = warehouse
                 relocation.company = company
                 relocation.save()
-                flash(_('Created a new relocation.'))
-
+                flash(_('Created a new relocation "{product}" from '
+                        '"{from_location}" to "{to_location}" '
+                        '(Qty: {quantity}).').format(
+                    product=relocation.product.rec_name,
+                    from_location=relocation.from_location.rec_name,
+                    to_location=relocation.to_location.rec_name,
+                    quantity=int(qty),
+                    ), 'success')
                 if data.get('confirm'):
-                    Relocation.confirm([relocation])
-                    flash(_('Confirmed new relocation. A move was generated to new location.'))
+                    try:
+                        Relocation.confirm([relocation])
+                        flash(_('Confirmed new relocation "{product}". '
+                                '"A move was generated to new location.').format(
+                            product=relocation.product.rec_name), 'success')
+                    except Exception as e:
+                        flash(e[1][0], 'danger')
         elif qty == 0:
             flash(_('Qty is 0. Not created new relocation.'))
         else:
             flash(_('Not found product.'))
-
-    locations = Location.search([
-        ('type', 'not in', ('warehouse', 'view')),
-        ])
-    default_to_location = Relocation.default_to_location()
 
     if request.json:
         # Add JSON messages (success, warning)
@@ -131,6 +137,36 @@ def edit(lang):
 
         session.pop('_flashes', None)
         return jsonify(result=True, messages=messages)
+
+    return redirect(url_for('.relocations', lang=g.language))
+
+@stockrelocation.route("/relocation/edit", methods=["GET", "POST"], endpoint="edit")
+@login_required
+@tryton.transaction()
+@csrf.exempt
+def edit(lang):
+    '''Edit'''
+
+    context = Transaction().context
+
+    company = None
+    employee = None
+    warehouse = None
+    if context.get('company'):
+        company = context['company']
+    if context.get('employee'):
+        employee = context['employee']
+    if context.get('stock_warehouse'):
+        warehouse = context['stock_warehouse']
+
+    if not company or not employee or not warehouse:
+        flash(_('Select an employee, a warehouse or company in your preferences.'))
+        return redirect(url_for('.relocations', lang=g.language))
+
+    locations = Location.search([
+        ('type', 'not in', ('warehouse', 'view')),
+        ])
+    default_to_location = Relocation.default_to_location()
 
     #breadcumbs
     breadcrumbs = [{
@@ -171,11 +207,11 @@ def confirm(lang):
             relocations = Relocation.search(domain)
             try:
                 Relocation.confirm(relocations)
-                flash(_('Confirmed to move "{total}" product/s to new locations.').format(
+                flash(_('Confirmed to move {total} product/s to new locations.').format(
                     total=len(relocations)), 'info')
             except Exception as e:
                 flash(_('Error when confirm relocations: {e}').format(
-                    e=e[1][1]), 'danger')
+                    e=e[1][0]), 'danger')
 
     return redirect(url_for('.relocations', lang=g.language))
 
@@ -200,11 +236,11 @@ def delete(lang):
             relocations = Relocation.search(domain)
             try:
                 Relocation.delete(relocations)
-                flash(_('Deleted "{total}" draft location/s.').format(
+                flash(_('Deleted {total} draft location/s.').format(
                     total=len(relocations)), 'info')
             except Exception as e:
                 flash(_('Error when delete relocations: {e}').format(
-                    e=e[1][1]), 'danger')
+                    e=e[1][0]), 'danger')
 
     return redirect(url_for('.relocations', lang=g.language))
 
