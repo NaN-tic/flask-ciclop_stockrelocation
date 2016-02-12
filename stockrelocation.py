@@ -43,9 +43,9 @@ def product(lang):
             relocation = Relocation()
             relocation.product = product
             relocation.warehouse = warehouse
-            on_change = relocation.on_change_product() # TODO 3.8 return obj against dict
-            vals['quantity'] = int(on_change['quantity'])
-            vals['from_location'] = on_change['from_location']
+            on_change = relocation.on_change_product()
+            vals['quantity'] = int(on_change.quantity) if on_change.quantity else 0
+            vals['from_location'] = on_change.from_location.id if on_change.from_location else None
 
     return jsonify(results=vals)
 
@@ -92,8 +92,8 @@ def save(lang):
                 relocation = Relocation()
                 relocation.planned_date = Relocation.default_planned_date()
                 relocation.product = product
-                on_change = relocation.on_change_product() # TODO 3.8
-                relocation.uom = on_change['uom']
+                on_change = relocation.on_change_product()
+                relocation.uom = on_change.uom
                 relocation.from_location = int(data['from_location'])
                 relocation.to_location = int(data['to_location'])
                 relocation.quantity = qty
