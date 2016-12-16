@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, g, url_for, flash, redirect, \
 from ciclop.tryton import tryton
 from ciclop.csrf import csrf
 from ciclop.helpers import login_required
-from flask.ext.babel import gettext as _
+from flask_babel import gettext as _
 from trytond.transaction import Transaction
 
 stockrelocation = Blueprint('stockrelocation', __name__, template_folder='templates')
