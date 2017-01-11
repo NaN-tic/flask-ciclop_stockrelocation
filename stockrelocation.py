@@ -23,6 +23,7 @@ def product(lang):
     '''Get Product Info JSON'''
 
     product = request.json.get('product')
+    from_location = request.json.get('from_location')
 
     warehouse = Transaction().context.get('stock_warehouse')
     if warehouse:
@@ -43,6 +44,7 @@ def product(lang):
             relocation = Relocation()
             relocation.product = product
             relocation.warehouse = warehouse
+            relocation.from_location = int(from_location) if from_location else None
             on_change = relocation.on_change_product()
             vals['quantity'] = int(on_change.quantity) if on_change.quantity else 0
             vals['from_location'] = on_change.from_location.id if on_change.from_location else None
@@ -259,7 +261,7 @@ def relocation(lang, id):
         abort(404)
 
     relocation, = relocations
-    
+
     #breadcumbs
     breadcrumbs = [{
         'slug': None,
@@ -284,7 +286,7 @@ def relocation(lang, id):
 @csrf.exempt
 def relocations(lang):
     '''Relocations'''
-    
+
     employee = Relocation.default_employee()
     planned_date = Relocation.default_planned_date()
 
