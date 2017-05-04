@@ -24,6 +24,10 @@ def product(lang):
 
     product = request.json.get('product')
     from_location = request.json.get('from_location')
+    from_locations = Location.search([
+        ('type', 'not in', ('warehouse', 'view')),
+        ('name', '=', from_location),
+        ], limit=1)
 
     warehouse = Transaction().context.get('stock_warehouse')
     if warehouse:
@@ -44,10 +48,10 @@ def product(lang):
             relocation = Relocation()
             relocation.product = product
             relocation.warehouse = warehouse
-            relocation.from_location = int(from_location) if from_location else None
+            relocation.from_location = from_locations[0] if from_locations else None
             on_change = relocation.on_change_product()
             vals['quantity'] = int(on_change.quantity) if on_change.quantity else 0
-            vals['from_location'] = on_change.from_location.id if on_change.from_location else None
+            # vals['from_location'] = on_change.from_location.id if on_change.from_location else None
 
     return jsonify(results=vals)
 
@@ -71,7 +75,7 @@ def save(lang):
         warehouse = context['stock_warehouse']
 
     if not company or not employee or not warehouse:
-        flash(_('Select an employee, a warehouse or company in your preferences.'))
+        flash(_('Select an employee, a warehouse or a company in your preferences.'))
         return redirect(url_for('.relocations', lang=g.language))
 
     data = {}
@@ -88,7 +92,32 @@ def save(lang):
             products = Product.search([
                 ('rec_name', '=', data['product']),
                 ], limit=1)
-            if products:
+
+            from_location = None
+            to_location = None
+            for location in Location.search([
+                        ('type', 'not in', ('warehouse', 'view')),
+                    ['OR',
+                        ('name', '=', data['from_location']),
+                        ('name', '=', data['to_location']),
+                        ],
+                    ]):
+                if location.name == data['from_location']:
+                    from_location = location
+                if location.name == data['to_location']:
+                    to_location = location
+
+            if not from_location or not to_location:
+                flash(_('Not found "{from_location}" '
+                        'or "{to_location}" locations').format(
+                    from_location=data['from_location'],
+                    to_location=data['to_location'],
+                    ))
+            elif not products:
+                flash(_('Can not found "{product}"').format(
+                    product=data['product'],
+                    ))
+            elif products:
                 product, = products
 
                 relocation = Relocation()
@@ -96,8 +125,8 @@ def save(lang):
                 relocation.product = product
                 on_change = relocation.on_change_product()
                 relocation.uom = on_change.uom
-                relocation.from_location = int(data['from_location'])
-                relocation.to_location = int(data['to_location'])
+                relocation.from_location = from_location
+                relocation.to_location = to_location
                 relocation.quantity = qty
                 relocation.employee = employee
                 relocation.warehouse = warehouse
@@ -120,10 +149,8 @@ def save(lang):
                     except Exception as e:
                         message = '. '.join(filter(None, list(e[1])))
                         flash(message, 'danger')
-        elif qty == 0:
-            flash(_('Qty is 0. Not created new relocation.'))
         else:
-            flash(_('Not found product.'))
+            flash(_('Can not create a relocation with the quantity is 0.'))
 
     if request.json:
         # Add JSON messages (success, warning)
@@ -166,10 +193,12 @@ def edit(lang):
         flash(_('Select an employee, a warehouse or company in your preferences.'))
         return redirect(url_for('.relocations', lang=g.language))
 
-    locations = Location.search([
-        ('type', 'not in', ('warehouse', 'view')),
-        ])
+    # locations = Location.search([
+    #     ('type', 'not in', ('warehouse', 'view')),
+    #     ])
     default_to_location = Relocation.default_to_location()
+    if default_to_location:
+        default_to_location = Location(default_to_location).name
 
     #breadcumbs
     breadcrumbs = [{
@@ -185,7 +214,7 @@ def edit(lang):
 
     return render_template('stock-relocation-edit.html',
         breadcrumbs=breadcrumbs,
-        locations=locations,
+        # locations=locations,
         default_to_location=default_to_location,
         )
 
